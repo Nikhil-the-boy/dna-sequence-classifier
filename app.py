@@ -1,6 +1,29 @@
 import streamlit as st
 import joblib
 import numpy as np
+import os
+import requests
+
+# ------------------ Auto-download models from Google Drive if not present ------------------
+def download_file_from_google_drive(share_url, filename):
+    if os.path.exists(filename):
+        return
+    file_id = share_url.split("/d/")[1].split("/")[0]
+    download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+    response = requests.get(download_url)
+    if response.status_code == 200:
+        with open(filename, "wb") as f:
+            f.write(response.content)
+        st.success(f"📥 Downloaded {filename}")
+    else:
+        st.error(f"❌ Failed to download {filename} from Google Drive.")
+
+# 🔗 Replace with your real file share URL
+model_url = "https://drive.google.com/file/d/1nGbtMUYtJAbBtVNI7roWDvN8NcY_Sa0R/view?usp=sharing"
+encoder_url = "https://drive.google.com/file/d/1nGbtMUYtJAbBtVNI7roWDvN8NcY_Sa0R/view?usp=sharing"
+
+download_file_from_google_drive(model_url, "dna_classifier_rf.pkl")
+download_file_from_google_drive(encoder_url, "label_encoder.pkl")
 
 # ------------------ Load Model and Label Encoder ------------------
 model = joblib.load("dna_classifier_rf.pkl")
@@ -37,7 +60,6 @@ if st.button("🔍 Predict"):
         st.warning("⚠️ Please enter a DNA sequence first.")
     else:
         try:
-            # One-hot encode + extra feature
             encoded_seq = one_hot_encode_seq(user_input.strip(), MAX_SEQ_LEN)
             seq_len = len(user_input.strip())   # Extra feature
             final_input = np.append(encoded_seq, seq_len)  # (3664 + 1 = 3665)
@@ -50,6 +72,3 @@ if st.button("🔍 Predict"):
         except Exception as e:
             st.error(f"❌ Error during prediction: {str(e)}")
 
-# Footer
-st.markdown("---")
-st.markdown("Built with ❤️ using Streamlit and scikit-learn")
