@@ -1,42 +1,59 @@
 import streamlit as st
+import joblib
+import numpy as np
 import os
 import gdown
-import numpy as np
-from model_utils import load_model, one_hot_encode_seq
 
-# Set up Streamlit page
-st.set_page_config(page_title="DNA Classifier", layout="wide")
-st.title("🧬 DNA Sequence Classifier (Random Forest)")
-st.write("Input a DNA sequence to classify it.")
-
-# Google Drive download (only once)
+# ------------------ Google Drive Downloads ------------------
 MODEL_URL = "https://drive.google.com/uc?id=1nGbtMUYtJAbBtVNI7roWDvN8NcY_Sa0R"
-ENCODER_URL = "https://drive.google.com/uc?id=1Fz8ddcyaUJVmIMLcojZxAqf1fKHn_6Cn"
+ENCODER_URL = "https://drive.google.com/uc?id=1U6Jv93VYVRoOxRSZWrkAyMrzO_cWku9V"
 
 if not os.path.exists("dna_classifier_rf.pkl"):
-    st.info("⏳ Downloading model...")
     gdown.download(MODEL_URL, "dna_classifier_rf.pkl", quiet=False)
 
 if not os.path.exists("label_encoder.pkl"):
-    st.info("⏳ Downloading encoder...")
     gdown.download(ENCODER_URL, "label_encoder.pkl", quiet=False)
 
-# Load model + encoder
-model, encoder = load_model("dna_classifier_rf.pkl", "label_encoder.pkl")
+# ------------------ Load Model and Encoder ------------------
+model = joblib.load("dna_classifier_rf.pkl")
+le = joblib.load("label_encoder.pkl")
 
-if model is None or encoder is None:
-    st.error("❌ Failed to load model or encoder.")
-else:
-    seq = st.text_area("Enter DNA Sequence", height=150)
-    if st.button("Predict"):
-        if seq.strip() == "":
-            st.warning("Please enter a sequence.")
-        else:
-            encoded = one_hot_encode_seq(seq)
-            X = np.array(encoded).reshape(1, -1)
-            try:
-                pred = model.predict(X)
-                label = encoder.inverse_transform(pred)[0]
-                st.success(f"✅ Predicted Class: {label}")
-            except Exception as e:
-                st.error(f"Prediction Error: {e}")
+# ------------------ Constants ------------------
+FIXED_MAX_LEN = 916  # ⛔️ DO NOT change this unless you retrain model
+
+# ------------------ One-hot Encoder ------------------
+def one_hot_encode_seq(seq, max_len):
+    mapping = {
+        'A': [1, 0, 0, 0],
+        'C': [0, 1, 0, 0],
+        'G': [0, 0, 1, 0],
+        'T': [0, 0, 0, 1],
+        'N': [0, 0, 0, 0]
+    }
+    seq = seq.upper()
+    seq = seq[:max_len]
+    padded_seq = seq.ljust(max_len, 'N')
+    encoded = [mapping.get(base, [0, 0, 0, 0]) for base in padded_seq]
+    return np.array(encoded).flatten()
+
+# ------------------ Streamlit App ------------------
+st.title("🧬 DNA Classifier (Dynamic Input ✅)")
+st.markdown("Paste your DNA sequence (A/C/G/T only). It will be auto-truncated/padded as needed.")
+
+user_input = st.text_area("📝 Enter DNA sequence")
+
+if st.button("🚀 Predict"):
+    if not user_input.strip():
+        st.warning("⚠️ Please enter a DNA sequence.")
+    else:
+        try:
+            seq_len = len(user_input.strip())
+            encoded = one_hot_encode_seq(user_input.strip(), FIXED_MAX_LEN)
+            final_input = np.append(encoded, seq_len).reshape(1, -1)
+
+            prediction = model.predict(final_input)[0]
+            predicted_label = le.inverse_transform([prediction])[0]
+
+            st.success(f"✅ Prediction: **{predicted_label}**")
+        except Exception as e:
+            st.error(f"❌ Error: {str(e)}")
