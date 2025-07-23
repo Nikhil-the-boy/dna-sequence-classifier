@@ -19,7 +19,7 @@ model = joblib.load("dna_classifier_rf.pkl")
 le = joblib.load("label_encoder.pkl")
 
 # ------------------ Constants ------------------
-FIXED_MAX_LEN = 916  # ⛔️ DO NOT change this unless you retrain model
+FIXED_MAX_LEN = 916  
 
 # ------------------ One-hot Encoder ------------------
 def one_hot_encode_seq(seq, max_len):
@@ -37,14 +37,14 @@ def one_hot_encode_seq(seq, max_len):
     return np.array(encoded).flatten()
 
 # ------------------ Streamlit App ------------------
-st.title("🧬 DNA Classifier (Dynamic Input ✅)")
+st.title("🧬 DNA Classifier (Dynamic Input )")
 st.markdown("Paste your DNA sequence (A/C/G/T only). It will be auto-truncated/padded as needed.")
 
-user_input = st.text_area("📝 Enter DNA sequence")
+user_input = st.text_area(" Enter DNA sequence")
 
-if st.button("🚀 Predict"):
+if st.button(" Predict"):
     if not user_input.strip():
-        st.warning("⚠️ Please enter a DNA sequence.")
+        st.warning(" Please enter a DNA sequence.")
     else:
         try:
             seq_len = len(user_input.strip())
@@ -54,6 +54,6 @@ if st.button("🚀 Predict"):
             prediction = model.predict(final_input)[0]
             predicted_label = le.inverse_transform([prediction])[0]
 
-            st.success(f"✅ Prediction: **{predicted_label}**")
+            st.success(f" Prediction: **{predicted_label}**")
         except Exception as e:
-            st.error(f"❌ Error: {str(e)}")
+            st.error(f" Error: {str(e)}")
